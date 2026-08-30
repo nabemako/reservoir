@@ -163,16 +163,24 @@ class ReservoirComputer:
         
         Args:
             X: Input sequences (sequence_length, input_size)
-            y: Target outputs (sequence_length - warmup, output_size)
+            y: Target outputs (sequence_length, output_size)
             activation: Activation function for reservoir
             warmup: Number of warmup steps
         """
         # Generate reservoir states
         states = self.generate_states(X, activation, warmup)
         
+        # Adjust y to match the number of states (after warmup)
+        y_train = y[warmup:]
+        
+        # Ensure same number of samples
+        min_len = min(states.shape[0], y_train.shape[0])
+        states = states[:min_len]
+        y_train = y_train[:min_len]
+        
         # Train output layer using Ridge regression
         ridge = Ridge(alpha=self.ridge_alpha)
-        ridge.fit(states, y)
+        ridge.fit(states, y_train)
         
         self.W_out = ridge.coef_.T  # Shape: (reservoir_size, output_size)
         self.b_out = ridge.intercept_
